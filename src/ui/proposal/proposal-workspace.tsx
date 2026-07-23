@@ -535,8 +535,31 @@ export function ProposalWorkspace({
                 <ul>
                   {review.blocks.map((block) => (
                     <li key={block.id}>
-                      <strong>{block.classification}</strong> ·{" "}
-                      {block.afterText || "Empty block"}
+                      <strong>{block.classification}</strong>
+                      {block.wordChanges.length ? (
+                        <p className="word-diff">
+                          {block.wordChanges.map((change, index) =>
+                            change.kind === "delete" ? (
+                              <del key={index}>{change.text}</del>
+                            ) : change.kind === "insert" ? (
+                              <ins key={index}>{change.text}</ins>
+                            ) : (
+                              <span key={index}>{change.text}</span>
+                            ),
+                          )}
+                        </p>
+                      ) : (
+                        <div className="review-samples">
+                          <p>
+                            <span>Before</span>
+                            {block.beforeText || "Empty block"}
+                          </p>
+                          <p>
+                            <span>After</span>
+                            {block.afterText || "Empty block"}
+                          </p>
+                        </div>
+                      )}
                     </li>
                   ))}
                 </ul>
