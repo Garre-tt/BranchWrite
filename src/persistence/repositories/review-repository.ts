@@ -66,6 +66,9 @@ export class ReviewRepository {
       .orderBy(desc(diffSnapshots.createdAt))
       .get();
     if (!row) return null;
+    if (row.algorithmVersion !== REVIEW_ALGORITHM_VERSION) {
+      throw new Error("This Review uses an unsupported algorithm version.");
+    }
     const payload = JSON.parse(row.hunksJson) as Pick<
       DiffSnapshot,
       "documentId" | "staleReason" | "blocks"

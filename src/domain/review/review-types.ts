@@ -1,6 +1,6 @@
 import type { StructuredNodeJson } from "@/editor/structured-content";
 
-export const REVIEW_ALGORITHM_VERSION = "branchwrite-review-v1";
+export const REVIEW_ALGORITHM_VERSION = "branchwrite-review-v2";
 
 export type WordChange = Readonly<{
   kind: "equal" | "delete" | "insert";
@@ -8,10 +8,12 @@ export type WordChange = Readonly<{
 }>;
 
 export type SentenceReplacement = Readonly<{
+  id: string;
   before: string;
   after: string;
   beforeFrom: number;
   beforeTo: number;
+  afterContent: readonly StructuredNodeJson[];
   wordChanges: readonly WordChange[];
 }>;
 
@@ -22,6 +24,7 @@ export type ReviewBlock = Readonly<{
   id: string;
   type: string;
   classification: ReviewBlockClassification;
+  blockHunkId: string;
   expectedTargetHash: string;
   before: StructuredNodeJson;
   after: StructuredNodeJson;

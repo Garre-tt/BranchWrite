@@ -78,6 +78,7 @@ export class DeterministicDiffService implements DiffService {
         id,
         type: before.type,
         classification,
+        blockHunkId: `block:${id}`,
         expectedTargetHash: hashReviewBlock(before),
         before: structuredClone(before),
         after: structuredClone(after),
@@ -91,7 +92,13 @@ export class DeterministicDiffService implements DiffService {
             : [],
         sentenceReplacement:
           classification === "replacement"
-            ? eligibleSentenceReplacement(before, after, beforeText, afterText)
+            ? eligibleSentenceReplacement(
+                id,
+                before,
+                after,
+                beforeText,
+                afterText,
+              )
             : null,
       };
     });

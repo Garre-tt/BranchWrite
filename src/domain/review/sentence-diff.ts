@@ -47,6 +47,7 @@ function normalized(sentence: Sentence): string {
 }
 
 export function eligibleSentenceReplacement(
+  blockId: string,
   beforeBlock: StructuredNodeJson,
   afterBlock: StructuredNodeJson,
   beforeText: string,
@@ -100,10 +101,35 @@ export function eligibleSentenceReplacement(
   if (!singleSentence && (!anchors.length || !anchorsUnique)) return null;
 
   return {
+    id: `sentence:${blockId}:${changedBefore[0]!.from}:${changedBefore[0]!.to}`,
     before: changedBefore[0]!.text,
     after: changedAfter[0]!.text,
     beforeFrom: changedBefore[0]!.from,
     beforeTo: changedBefore[0]!.to,
+    afterContent: sliceInlineContent(
+      afterBlock.content ?? [],
+      changedAfter[0]!.from,
+      changedAfter[0]!.to,
+    ),
     wordChanges: diffWords(changedBefore[0]!.text, changedAfter[0]!.text),
   };
+}
+
+export function sliceInlineContent(
+  content: readonly StructuredNodeJson[],
+  from: number,
+  to: number,
+): StructuredNodeJson[] {
+  const result: StructuredNodeJson[] = [];
+  let offset = 0;
+  for (const node of content) {
+    const text = node.text ?? "";
+    const start = Math.max(0, from - offset);
+    const end = Math.min(text.length, to - offset);
+    if (start < end) {
+      result.push({ ...structuredClone(node), text: text.slice(start, end) });
+    }
+    offset += text.length;
+  }
+  return result;
 }

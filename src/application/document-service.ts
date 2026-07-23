@@ -6,9 +6,14 @@ import { ProposalRepository } from "@/persistence/repositories/proposal-reposito
 import { ProposalService } from "@/application/proposal-service";
 import { ReviewService } from "@/application/review-service";
 import { ReviewRepository } from "@/persistence/repositories/review-repository";
+import { MergeService } from "@/application/merge-service";
 
 export function getDocumentService(): DocumentService {
   return new DocumentService(new DocumentRepository(getRuntimeDatabase()));
+}
+
+export function getMergeService(): MergeService {
+  return new MergeService(getRuntimeDatabase());
 }
 
 export function getReviewService(): ReviewService {
