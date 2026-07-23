@@ -1,0 +1,11 @@
+.next
+node_modules
+coverage
+playwright-report
+test-results
+data
+.npm-cache
+drizzle/meta
+PLAN.md
+IMPLEMENTATION_ROADMAP.md
+old_first_PROJECT_PLAN.md

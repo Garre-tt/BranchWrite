@@ -1,0 +1,790 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "0e0e47cc-931b-448a-91ba-07df3b3666c3",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "tables": {
+    "alternatives": {
+      "name": "alternatives",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "document_id": {
+          "name": "document_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "proposal_id": {
+          "name": "proposal_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "parent_alternative_id": {
+          "name": "parent_alternative_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "content_json": {
+          "name": "content_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "content_hash": {
+          "name": "content_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "content_version": {
+          "name": "content_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "is_edited": {
+          "name": "is_edited",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "alternatives_proposal_unique": {
+          "name": "alternatives_proposal_unique",
+          "columns": [
+            "proposal_id"
+          ],
+          "isUnique": true
+        },
+        "alternatives_document_created_idx": {
+          "name": "alternatives_document_created_idx",
+          "columns": [
+            "document_id",
+            "created_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "alternatives_document_id_documents_id_fk": {
+          "name": "alternatives_document_id_documents_id_fk",
+          "tableFrom": "alternatives",
+          "tableTo": "documents",
+          "columnsFrom": [
+            "document_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "alternatives_proposal_id_proposals_id_fk": {
+          "name": "alternatives_proposal_id_proposals_id_fk",
+          "tableFrom": "alternatives",
+          "tableTo": "proposals",
+          "columnsFrom": [
+            "proposal_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "alternatives_parent_alternative_id_alternatives_id_fk": {
+          "name": "alternatives_parent_alternative_id_alternatives_id_fk",
+          "tableFrom": "alternatives",
+          "tableTo": "alternatives",
+          "columnsFrom": [
+            "parent_alternative_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "alternatives_content_version_nonnegative": {
+          "name": "alternatives_content_version_nonnegative",
+          "value": "\"alternatives\".\"content_version\" >= 0"
+        }
+      }
+    },
+    "diff_snapshots": {
+      "name": "diff_snapshots",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "alternative_id": {
+          "name": "alternative_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "base_revision_id": {
+          "name": "base_revision_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "base_scope_hash": {
+          "name": "base_scope_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "alternative_content_hash": {
+          "name": "alternative_content_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "algorithm_version": {
+          "name": "algorithm_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "hunks_json": {
+          "name": "hunks_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "diff_snapshots_alternative_created_idx": {
+          "name": "diff_snapshots_alternative_created_idx",
+          "columns": [
+            "alternative_id",
+            "created_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "diff_snapshots_alternative_id_alternatives_id_fk": {
+          "name": "diff_snapshots_alternative_id_alternatives_id_fk",
+          "tableFrom": "diff_snapshots",
+          "tableTo": "alternatives",
+          "columnsFrom": [
+            "alternative_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "diff_snapshots_base_revision_id_draft_revisions_id_fk": {
+          "name": "diff_snapshots_base_revision_id_draft_revisions_id_fk",
+          "tableFrom": "diff_snapshots",
+          "tableTo": "draft_revisions",
+          "columnsFrom": [
+            "base_revision_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "diff_snapshots_status": {
+          "name": "diff_snapshots_status",
+          "value": "\"diff_snapshots\".\"status\" in ('current', 'stale')"
+        }
+      }
+    },
+    "documents": {
+      "name": "documents",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "current_content_json": {
+          "name": "current_content_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "current_content_hash": {
+          "name": "current_content_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "current_version": {
+          "name": "current_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "schema_version": {
+          "name": "schema_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "documents_title_nonempty": {
+          "name": "documents_title_nonempty",
+          "value": "length(trim(\"documents\".\"title\")) > 0"
+        },
+        "documents_version_nonnegative": {
+          "name": "documents_version_nonnegative",
+          "value": "\"documents\".\"current_version\" >= 0"
+        }
+      }
+    },
+    "draft_revisions": {
+      "name": "draft_revisions",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "document_id": {
+          "name": "document_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "parent_revision_id": {
+          "name": "parent_revision_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "content_json": {
+          "name": "content_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "content_hash": {
+          "name": "content_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "schema_version": {
+          "name": "schema_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "cause": {
+          "name": "cause",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "draft_revisions_document_created_idx": {
+          "name": "draft_revisions_document_created_idx",
+          "columns": [
+            "document_id",
+            "created_at"
+          ],
+          "isUnique": false
+        },
+        "draft_revisions_document_hash_idx": {
+          "name": "draft_revisions_document_hash_idx",
+          "columns": [
+            "document_id",
+            "content_hash"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "draft_revisions_document_id_documents_id_fk": {
+          "name": "draft_revisions_document_id_documents_id_fk",
+          "tableFrom": "draft_revisions",
+          "tableTo": "documents",
+          "columnsFrom": [
+            "document_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "draft_revisions_parent_revision_id_draft_revisions_id_fk": {
+          "name": "draft_revisions_parent_revision_id_draft_revisions_id_fk",
+          "tableFrom": "draft_revisions",
+          "tableTo": "draft_revisions",
+          "columnsFrom": [
+            "parent_revision_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "draft_revisions_cause": {
+          "name": "draft_revisions_cause",
+          "value": "\"draft_revisions\".\"cause\" in ('initial', 'proposal_base', 'merge', 'revert')"
+        }
+      }
+    },
+    "merge_events": {
+      "name": "merge_events",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "document_id": {
+          "name": "document_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "alternative_id": {
+          "name": "alternative_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "diff_snapshot_id": {
+          "name": "diff_snapshot_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "accepted_hunk_ids_json": {
+          "name": "accepted_hunk_ids_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "before_revision_id": {
+          "name": "before_revision_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "after_revision_id": {
+          "name": "after_revision_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "target_expectations_json": {
+          "name": "target_expectations_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "acceptance_kind": {
+          "name": "acceptance_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "document_version_after": {
+          "name": "document_version_after",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "merge_events_document_created_idx": {
+          "name": "merge_events_document_created_idx",
+          "columns": [
+            "document_id",
+            "created_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "merge_events_document_id_documents_id_fk": {
+          "name": "merge_events_document_id_documents_id_fk",
+          "tableFrom": "merge_events",
+          "tableTo": "documents",
+          "columnsFrom": [
+            "document_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "merge_events_alternative_id_alternatives_id_fk": {
+          "name": "merge_events_alternative_id_alternatives_id_fk",
+          "tableFrom": "merge_events",
+          "tableTo": "alternatives",
+          "columnsFrom": [
+            "alternative_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "merge_events_diff_snapshot_id_diff_snapshots_id_fk": {
+          "name": "merge_events_diff_snapshot_id_diff_snapshots_id_fk",
+          "tableFrom": "merge_events",
+          "tableTo": "diff_snapshots",
+          "columnsFrom": [
+            "diff_snapshot_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "merge_events_before_revision_id_draft_revisions_id_fk": {
+          "name": "merge_events_before_revision_id_draft_revisions_id_fk",
+          "tableFrom": "merge_events",
+          "tableTo": "draft_revisions",
+          "columnsFrom": [
+            "before_revision_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "merge_events_after_revision_id_draft_revisions_id_fk": {
+          "name": "merge_events_after_revision_id_draft_revisions_id_fk",
+          "tableFrom": "merge_events",
+          "tableTo": "draft_revisions",
+          "columnsFrom": [
+            "after_revision_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "merge_events_acceptance_kind": {
+          "name": "merge_events_acceptance_kind",
+          "value": "\"merge_events\".\"acceptance_kind\" in ('sentence', 'block', 'section')"
+        },
+        "merge_events_document_version_positive": {
+          "name": "merge_events_document_version_positive",
+          "value": "\"merge_events\".\"document_version_after\" > 0"
+        }
+      }
+    },
+    "proposals": {
+      "name": "proposals",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "document_id": {
+          "name": "document_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "base_revision_id": {
+          "name": "base_revision_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "scope_block_ids_json": {
+          "name": "scope_block_ids_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "prompt": {
+          "name": "prompt",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "normalized_prompt": {
+          "name": "normalized_prompt",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "generator_version": {
+          "name": "generator_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "input_hash": {
+          "name": "input_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "content_json": {
+          "name": "content_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "content_hash": {
+          "name": "content_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "label": {
+          "name": "label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "proposals_document_created_idx": {
+          "name": "proposals_document_created_idx",
+          "columns": [
+            "document_id",
+            "created_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "proposals_document_id_documents_id_fk": {
+          "name": "proposals_document_id_documents_id_fk",
+          "tableFrom": "proposals",
+          "tableTo": "documents",
+          "columnsFrom": [
+            "document_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "proposals_base_revision_id_draft_revisions_id_fk": {
+          "name": "proposals_base_revision_id_draft_revisions_id_fk",
+          "tableFrom": "proposals",
+          "tableTo": "draft_revisions",
+          "columnsFrom": [
+            "base_revision_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "proposals_status": {
+          "name": "proposals_status",
+          "value": "\"proposals\".\"status\" in ('completed', 'cancelled', 'failed')"
+        },
+        "proposals_terminal_content": {
+          "name": "proposals_terminal_content",
+          "value": "(\n        \"proposals\".\"status\" = 'completed'\n        and \"proposals\".\"content_json\" is not null\n        and \"proposals\".\"content_hash\" is not null\n        and \"proposals\".\"completed_at\" is not null\n      ) or (\n        \"proposals\".\"status\" in ('cancelled', 'failed')\n        and \"proposals\".\"content_json\" is null\n        and \"proposals\".\"content_hash\" is null\n        and \"proposals\".\"completed_at\" is null\n      )"
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}

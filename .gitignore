@@ -1,0 +1,28 @@
+# Dependencies and build outputs
+node_modules/
+.next/
+out/
+coverage/
+playwright-report/
+test-results/
+
+# Local runtime data
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# Local tooling caches
+.npm-cache/
+.node-gyp/
+.eslintcache
+
+# Environment and OS files
+.env
+.env.local
+.DS_Store
+Thumbs.db
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
