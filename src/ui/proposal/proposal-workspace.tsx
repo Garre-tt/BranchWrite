@@ -1,9 +1,10 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
+  createReview,
   generateProposal,
   listAlternatives,
   loadAlternative,
@@ -13,11 +14,13 @@ import {
   QUICK_ACTIONS,
   type Alternative,
 } from "@/domain/proposal/proposal-types";
+import type { DiffSnapshot } from "@/domain/review/review-types";
 import type { GenerationSource } from "@/ui/draft/draft-editor";
 import {
   AlternativeEditor,
   type AlternativeSaveBarrier,
 } from "@/ui/proposal/alternative-editor";
+import { ReviewRenderer } from "@/ui/review/review-renderer";
 
 type GenerationState =
   | { kind: "idle"; message: null }
@@ -38,6 +41,12 @@ export function ProposalWorkspace({
   const queryClient = useQueryClient();
   const [prompt, setPrompt] = useState("");
   const [selected, setSelected] = useState<Alternative | null>(null);
+  const [mode, setMode] = useState<"review" | "edit">("review");
+  const [review, setReview] = useState<DiffSnapshot | null>(null);
+  const [reviewStatus, setReviewStatus] = useState<
+    "idle" | "updating" | "error"
+  >("idle");
+  const reviewRequestRef = useRef(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [generationState, setGenerationState] = useState<GenerationState>({
     kind: "idle",
@@ -61,6 +70,38 @@ export function ProposalWorkspace({
     },
     [documentId, queryClient],
   );
+
+  const calculateReview = useCallback(
+    async (
+      alternative: Alternative,
+      againstCurrentDraft = false,
+      expectedDocumentVersion?: number,
+    ) => {
+      const requestId = ++reviewRequestRef.current;
+      setReviewStatus("updating");
+      try {
+        const snapshot = await createReview(alternative.id, {
+          againstCurrentDraft,
+          ...(expectedDocumentVersion === undefined
+            ? {}
+            : { expectedDocumentVersion }),
+        });
+        if (reviewRequestRef.current === requestId) {
+          setReview(snapshot);
+          setReviewStatus("idle");
+        }
+      } catch {
+        if (reviewRequestRef.current === requestId) setReviewStatus("error");
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!selected) return;
+    const timer = window.setTimeout(() => void calculateReview(selected), 0);
+    return () => window.clearTimeout(timer);
+  }, [calculateReview, selected]);
 
   async function runGeneration() {
     if (
@@ -106,6 +147,7 @@ export function ProposalWorkspace({
         controller.signal,
       );
       setSelected(alternative);
+      setMode("review");
       queryClient.setQueryData(
         alternativeKeys.detail(alternative.id),
         alternative,
@@ -154,6 +196,7 @@ export function ProposalWorkspace({
         queryFn: () => loadAlternative(alternativeId),
       });
       setSelected(alternative);
+      setMode("review");
       setDrawerOpen(false);
     } catch (error) {
       setSelectionError(
@@ -312,16 +355,79 @@ export function ProposalWorkspace({
             <span className="immutable-note">
               Proposal original is immutable
             </span>
+            <div className="proposal-mode-switch">
+              <button
+                type="button"
+                aria-pressed={mode === "review"}
+                onClick={() => {
+                  void (async () => {
+                    if (
+                      !alternativeBarrierRef.current ||
+                      (await alternativeBarrierRef.current())
+                    ) {
+                      setMode("review");
+                      await calculateReview(selected);
+                    }
+                  })();
+                }}
+              >
+                Review
+              </button>
+              <button
+                type="button"
+                aria-pressed={mode === "edit"}
+                onClick={() => setMode("edit")}
+              >
+                Edit Alternative
+              </button>
+            </div>
           </div>
-          <AlternativeEditor
-            key={selected.id}
-            alternative={selected}
-            onSaved={handleAlternativeSaved}
-            registerSaveBarrier={(barrier) => {
-              alternativeBarrierRef.current = barrier;
-              registerSaveBarrier(barrier);
-            }}
-          />
+          {mode === "edit" ? (
+            <AlternativeEditor
+              key={selected.id}
+              alternative={selected}
+              onSaved={handleAlternativeSaved}
+              onDirty={() => {
+                reviewRequestRef.current += 1;
+                setReviewStatus("updating");
+              }}
+              registerSaveBarrier={(barrier) => {
+                alternativeBarrierRef.current = barrier;
+                registerSaveBarrier(barrier);
+              }}
+            />
+          ) : reviewStatus === "updating" ? (
+            <div className="review-status" role="status">
+              Updating Review…
+            </div>
+          ) : reviewStatus === "error" || !review ? (
+            <div className="review-status" role="alert">
+              Review could not be calculated.
+              <button
+                type="button"
+                onClick={() => void calculateReview(selected)}
+              >
+                Retry
+              </button>
+            </div>
+          ) : (
+            <ReviewRenderer
+              snapshot={review}
+              onReviewCurrent={() => {
+                void (async () => {
+                  const prepared =
+                    await getGenerationSource()?.prepareGeneration();
+                  if (prepared) {
+                    await calculateReview(
+                      selected,
+                      true,
+                      prepared.documentVersion,
+                    );
+                  }
+                })();
+              }}
+            />
+          )}
         </div>
       ) : (
         <div className="proposal-empty">

@@ -17,10 +17,12 @@ export function AlternativeEditor({
   alternative,
   onSaved,
   registerSaveBarrier,
+  onDirty,
 }: {
   alternative: Alternative;
   onSaved: (alternative: Alternative) => void;
   registerSaveBarrier: (barrier: AlternativeSaveBarrier | null) => void;
+  onDirty: () => void;
 }) {
   const [topologyNotice, setTopologyNotice] = useState(false);
   const stableOnSaved = useCallback(
@@ -49,6 +51,7 @@ export function AlternativeEditor({
       },
     },
     onUpdate: ({ editor: currentEditor }) => {
+      onDirty();
       controller.markDirty(currentEditor.getJSON() as StructuredDocumentJson);
     },
     onBlur: () => void controller.flush(),

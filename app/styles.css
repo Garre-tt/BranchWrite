@@ -901,6 +901,138 @@ button:disabled {
   grid-column: 1 / -1;
 }
 
+.proposal-mode-switch {
+  display: flex;
+  grid-column: 1 / -1;
+  gap: 0.3rem;
+}
+
+.proposal-mode-switch button {
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--proposal-line);
+  border-radius: 0.4rem;
+  background: white;
+  color: #514b62;
+  cursor: pointer;
+}
+
+.proposal-mode-switch button[aria-pressed="true"] {
+  border-color: #76699a;
+  background: #e9e5f5;
+  font-weight: 750;
+}
+
+.review-status,
+.stale-review {
+  min-height: 15rem;
+  padding: 1.25rem;
+  color: #625b72;
+}
+
+.review-status button,
+.stale-review button {
+  display: block;
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.7rem;
+  border-radius: 0.45rem;
+  background: #ddd7ed;
+  color: #403653;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.review-list {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+.review-block {
+  padding: 0.85rem;
+  border: 1px solid var(--proposal-line);
+  border-left-width: 4px;
+  border-radius: 0.55rem;
+  background: white;
+}
+
+.review-block header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.65rem;
+  font-size: 0.72rem;
+}
+
+.review-block header span {
+  color: var(--quiet);
+}
+
+.review-unchanged {
+  border-left-color: #7b8a82;
+}
+
+.review-replacement,
+.review-addition,
+.review-deletion {
+  border-left-color: #a07337;
+}
+
+.review-formatting-only {
+  border-left-color: #74649d;
+}
+
+.word-diff {
+  font-family: Georgia, "Times New Roman", serif;
+  line-height: 1.65;
+}
+
+.word-diff del,
+.word-diff ins {
+  padding: 0.08rem 0.12rem;
+  text-decoration-thickness: 2px;
+}
+
+.word-diff del {
+  background: #f9dfdc;
+}
+
+.word-diff ins {
+  background: #dfeee3;
+  text-decoration: underline;
+}
+
+.review-samples {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.review-samples p {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.review-samples span {
+  display: inline-block;
+  min-width: 4rem;
+  color: var(--muted);
+  font-family: Inter, sans-serif;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.review-acceptance {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+
+.review-acceptance button {
+  padding: 0.35rem 0.55rem;
+  border: 1px solid var(--proposal-line);
+  border-radius: 0.4rem;
+  background: #f5f2fb;
+}
+
 .alternative-editor-shell {
   min-height: 26rem;
 }

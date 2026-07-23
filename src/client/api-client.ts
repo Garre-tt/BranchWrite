@@ -7,6 +7,7 @@ import type {
   Alternative,
   AlternativeSummary,
 } from "@/domain/proposal/proposal-types";
+import type { DiffSnapshot } from "@/domain/review/review-types";
 
 type SuccessEnvelope<Value> = {
   data: Value;
@@ -148,6 +149,24 @@ export function saveAlternativeContent(input: {
         content: input.content,
         expectedVersion: input.expectedVersion,
       }),
+    },
+  );
+}
+
+export function createReview(
+  alternativeId: string,
+  input: {
+    againstCurrentDraft: boolean;
+    expectedDocumentVersion?: number;
+  },
+  signal?: AbortSignal,
+): Promise<DiffSnapshot> {
+  return request(
+    `/api/alternatives/${encodeURIComponent(alternativeId)}/review`,
+    {
+      method: "POST",
+      ...(signal ? { signal } : {}),
+      body: JSON.stringify(input),
     },
   );
 }
