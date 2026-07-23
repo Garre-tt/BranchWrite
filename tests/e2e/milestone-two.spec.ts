@@ -24,15 +24,16 @@ test("generates, edits, saves, and reopens an Alternative without changing My Dr
     page.getByText("Generating deterministic demo content…"),
   ).toBeVisible();
 
+  await expect(draft).toHaveText(canonicalText);
+  await expect(page.getByText("Proposal original is immutable")).toBeVisible();
+  await expect(page.getByText("Changed", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Edit Alternative" }).click();
   const alternative = page.getByRole("textbox", {
     name: "Alternative editor",
   });
   await expect(alternative).toContainText(
     "We use the current draft to explain 12 results.",
-    { timeout: 5_000 },
   );
-  await expect(draft).toHaveText(canonicalText);
-  await expect(page.getByText("Proposal original is immutable")).toBeVisible();
 
   await alternative.click();
   await page.keyboard.press("End");
@@ -47,6 +48,7 @@ test("generates, edits, saves, and reopens an Alternative without changing My Dr
   await page.reload();
   await page.getByRole("button", { name: /Alternatives \(1\)/ }).click();
   await page.getByRole("button", { name: /Improve clarity.*Edited/s }).click();
+  await page.getByRole("button", { name: "Edit Alternative" }).click();
   await expect(alternative).toContainText("Edited independently.");
   await expect(draft).toHaveText(canonicalText);
 });

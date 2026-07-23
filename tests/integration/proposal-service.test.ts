@@ -2,12 +2,14 @@ import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { ProposalService } from "@/application/proposal-service";
+import { ReviewService } from "@/application/review-service";
 import { DocumentService } from "@/domain/document/document-service";
 import { DeterministicMockProposalGenerator } from "@/domain/proposal/mock-proposal-generator";
 import type { ProposalGenerator } from "@/domain/proposal/proposal-types";
 import type { StructuredDocumentJson } from "@/editor/structured-content";
 import { DocumentRepository } from "@/persistence/repositories/document-repository";
 import { ProposalRepository } from "@/persistence/repositories/proposal-repository";
+import { ReviewRepository } from "@/persistence/repositories/review-repository";
 import { alternatives, documents, proposals } from "@/persistence/schema";
 import {
   createTestDatabase,
@@ -261,5 +263,31 @@ describe("Proposal service persistence", () => {
       secondResult.value.id,
     ]);
     expect(listed.ok && listed.value[0]?.isEdited).toBe(true);
+  });
+
+  it("persists Review snapshots and invalidates them after Alternative edits", async () => {
+    const { alternative } = await generate();
+    const reviews = new ReviewService(
+      new ReviewRepository(database),
+      proposalRepository,
+      new DocumentRepository(database),
+    );
+    const created = reviews.create({
+      alternativeId: alternative.id,
+      againstCurrentDraft: false,
+    });
+    expect(created.ok && created.value.status).toBe("current");
+
+    const edited = structuredClone(alternative.content);
+    edited.content[0]!.content![0]!.text = "Edited after Review.";
+    expect(
+      proposalService.saveAlternative({
+        alternativeId: alternative.id,
+        content: edited,
+        expectedVersion: 0,
+      }).ok,
+    ).toBe(true);
+    const latest = reviews.latest(alternative.id);
+    expect(latest.ok && latest.value.status).toBe("stale");
   });
 });
