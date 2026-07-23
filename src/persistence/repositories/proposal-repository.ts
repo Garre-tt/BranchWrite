@@ -129,16 +129,26 @@ export class ProposalRepository {
 
   createOrReuseBaseRevision(input: {
     documentId: string;
+    expectedDocumentVersion: number;
     revisionId: string;
     createdAt: string;
-  }): DraftRevision | null {
+  }):
+    | { kind: "ready"; revision: DraftRevision }
+    | { kind: "not_found" }
+    | { kind: "stale"; actualVersion: number } {
     return this.connection.db.transaction((transaction) => {
       const document = transaction
         .select()
         .from(documents)
         .where(eq(documents.id, input.documentId))
         .get();
-      if (!document) return null;
+      if (!document) return { kind: "not_found" } as const;
+      if (document.currentVersion !== input.expectedDocumentVersion) {
+        return {
+          kind: "stale",
+          actualVersion: document.currentVersion,
+        } as const;
+      }
 
       const matching = transaction
         .select()
@@ -151,7 +161,9 @@ export class ProposalRepository {
         )
         .orderBy(desc(draftRevisions.createdAt))
         .get();
-      if (matching) return toRevision(matching);
+      if (matching) {
+        return { kind: "ready", revision: toRevision(matching) } as const;
+      }
 
       const parent = transaction
         .select()
@@ -182,7 +194,7 @@ export class ProposalRepository {
       if (!created) {
         throw new PersistedDocumentError("The Proposal base was not created.");
       }
-      return toRevision(created);
+      return { kind: "ready", revision: toRevision(created) } as const;
     });
   }
 
