@@ -4,12 +4,16 @@ import Bold from "@tiptap/extension-bold";
 import BulletList from "@tiptap/extension-bullet-list";
 import Document from "@tiptap/extension-document";
 import Heading from "@tiptap/extension-heading";
+import History from "@tiptap/extension-history";
 import Italic from "@tiptap/extension-italic";
 import Link from "@tiptap/extension-link";
 import ListItem from "@tiptap/extension-list-item";
 import OrderedList from "@tiptap/extension-ordered-list";
 import Paragraph from "@tiptap/extension-paragraph";
 import Text from "@tiptap/extension-text";
+
+import { BlockIdExtension } from "./block-id-extension";
+import { HISTORY_DEPTH, HISTORY_NEW_GROUP_DELAY_MS } from "./history-config";
 
 const blockIdAttribute = {
   default: null,
@@ -53,7 +57,13 @@ const BranchWriteBulletList = BulletList.extend({
 const BranchWriteOrderedList = OrderedList.extend({
   addAttributes() {
     return {
-      ...this.parent?.(),
+      start: {
+        default: 1,
+        parseHTML: (element: HTMLElement) =>
+          element.hasAttribute("start")
+            ? Number.parseInt(element.getAttribute("start") ?? "1", 10)
+            : 1,
+      },
       id: blockIdAttribute,
     };
   },
@@ -96,6 +106,11 @@ export function createEditorExtensions(): Extensions {
     Bold,
     Italic,
     BranchWriteLink,
+    History.configure({
+      depth: HISTORY_DEPTH,
+      newGroupDelay: HISTORY_NEW_GROUP_DELAY_MS,
+    }),
+    BlockIdExtension,
   ];
 }
 

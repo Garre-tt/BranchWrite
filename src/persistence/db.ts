@@ -21,16 +21,16 @@ export type DatabaseConnection = {
 };
 
 export function resolveDatabasePath(): string {
-  return path.resolve(
-    process.env.BRANCHWRITE_DATABASE_PATH ??
-      path.join(process.cwd(), "data", "branchwrite.db"),
-  );
+  const configuredPath = process.env.BRANCHWRITE_DATABASE_PATH;
+  return configuredPath
+    ? path.resolve(/* turbopackIgnore: true */ configuredPath)
+    : path.join(process.cwd(), "data", "branchwrite.db");
 }
 
 export function openDatabase(
   databasePath = resolveDatabasePath(),
 ): DatabaseConnection {
-  const resolvedPath = path.resolve(databasePath);
+  const resolvedPath = path.resolve(/* turbopackIgnore: true */ databasePath);
   mkdirSync(path.dirname(resolvedPath), { recursive: true });
 
   const client = new BetterSqlite3(resolvedPath, {

@@ -6,7 +6,7 @@ import type { DatabaseConnection } from "./db";
 
 export function migrateDatabase(
   connection: DatabaseConnection,
-  migrationsFolder = path.resolve(process.cwd(), "drizzle"),
+  migrationsFolder = path.join(process.cwd(), "drizzle"),
 ): void {
   migrate(connection.db, { migrationsFolder });
 }

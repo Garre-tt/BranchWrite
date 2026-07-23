@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 
 import "./styles.css";
+import { QueryProvider } from "@/ui/providers/query-provider";
+import { BranchWriteApp } from "@/ui/workspace/branchwrite-app";
 
 export const metadata: Metadata = {
   title: "BranchWrite",
@@ -15,7 +17,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <QueryProvider>
+          <BranchWriteApp />
+          {children}
+        </QueryProvider>
+      </body>
     </html>
   );
 }

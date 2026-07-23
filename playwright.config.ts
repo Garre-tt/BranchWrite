@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import path from "node:path";
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -22,5 +23,12 @@ export default defineConfig({
     url: "http://127.0.0.1:3100",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    env: {
+      BRANCHWRITE_DATABASE_PATH: path.resolve(
+        "test-results",
+        "branchwrite-e2e.db",
+      ),
+      BRANCHWRITE_NEXT_DIST_DIR: ".next-e2e",
+    },
   },
 });
