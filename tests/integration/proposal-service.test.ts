@@ -290,4 +290,48 @@ describe("Proposal service persistence", () => {
     const latest = reviews.latest(alternative.id);
     expect(latest.ok && latest.value.status).toBe("stale");
   });
+
+  it("ignores unrelated Draft changes but never relocates a missing target", async () => {
+    const { document, alternative } = await generate();
+    const reviews = new ReviewService(
+      new ReviewRepository(database),
+      proposalRepository,
+      new DocumentRepository(database),
+    );
+    const withUnrelated = structuredClone(document.content);
+    withUnrelated.content.push({
+      type: "paragraph",
+      attrs: { id: "unrelated" },
+      content: [{ type: "text", text: "Unrelated change." }],
+    });
+    const saved = documentsService.saveDocumentContent({
+      documentId: document.id,
+      content: withUnrelated,
+      expectedVersion: document.currentVersion,
+    });
+    if (!saved.ok) throw new Error("Unrelated save failed.");
+    const stillCurrent = reviews.create({
+      alternativeId: alternative.id,
+      againstCurrentDraft: false,
+    });
+    expect(stillCurrent.ok && stillCurrent.value.status).toBe("current");
+
+    const withoutTarget = structuredClone(withUnrelated);
+    withoutTarget.content = withoutTarget.content.filter(
+      (block) => block.attrs?.id !== "scope-a",
+    );
+    const deleted = documentsService.saveDocumentContent({
+      documentId: document.id,
+      content: withoutTarget,
+      expectedVersion: saved.value.currentVersion,
+    });
+    if (!deleted.ok) throw new Error("Target deletion failed.");
+    const stale = reviews.create({
+      alternativeId: alternative.id,
+      againstCurrentDraft: true,
+      expectedDocumentVersion: deleted.value.currentVersion,
+    });
+    expect(stale.ok && stale.value.status).toBe("stale");
+    expect(stale.ok && stale.value.staleReason).toBe("missing-target");
+  });
 });
