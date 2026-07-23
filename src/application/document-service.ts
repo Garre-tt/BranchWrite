@@ -4,9 +4,20 @@ import { DocumentRepository } from "@/persistence/repositories/document-reposito
 import { DeterministicMockProposalGenerator } from "@/domain/proposal/mock-proposal-generator";
 import { ProposalRepository } from "@/persistence/repositories/proposal-repository";
 import { ProposalService } from "@/application/proposal-service";
+import { ReviewService } from "@/application/review-service";
+import { ReviewRepository } from "@/persistence/repositories/review-repository";
 
 export function getDocumentService(): DocumentService {
   return new DocumentService(new DocumentRepository(getRuntimeDatabase()));
+}
+
+export function getReviewService(): ReviewService {
+  const database = getRuntimeDatabase();
+  return new ReviewService(
+    new ReviewRepository(database),
+    new ProposalRepository(database),
+    new DocumentRepository(database),
+  );
 }
 
 export function getProposalService(): ProposalService {

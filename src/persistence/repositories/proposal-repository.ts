@@ -16,6 +16,7 @@ import {
   alternatives,
   documents,
   draftRevisions,
+  diffSnapshots,
   proposals,
 } from "@/persistence/schema";
 
@@ -324,6 +325,11 @@ export class ProposalRepository {
               eq(alternatives.contentVersion, record.expectedVersion),
             ),
           )
+          .run();
+        transaction
+          .update(diffSnapshots)
+          .set({ status: "stale" })
+          .where(eq(diffSnapshots.alternativeId, record.alternativeId))
           .run();
       }
 

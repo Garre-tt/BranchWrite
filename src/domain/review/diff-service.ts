@@ -31,7 +31,7 @@ export function textContent(node: StructuredNodeJson): string {
   return (node.content ?? []).map(textContent).join("");
 }
 
-function blockHash(block: StructuredNodeJson): string {
+export function hashReviewBlock(block: StructuredNodeJson): string {
   return createHash("sha256").update(canonicalize(block), "utf8").digest("hex");
 }
 
@@ -78,7 +78,7 @@ export class DeterministicDiffService implements DiffService {
         id,
         type: before.type,
         classification,
-        expectedTargetHash: blockHash(before),
+        expectedTargetHash: hashReviewBlock(before),
         before: structuredClone(before),
         after: structuredClone(after),
         beforeText,
