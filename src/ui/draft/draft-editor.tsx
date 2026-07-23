@@ -21,6 +21,12 @@ export type GenerationSource = {
     scopeBlockIds: readonly string[];
   } | null>;
 };
+export type DraftAuthorityBridge = {
+  install: (
+    document: DraftDocument,
+    affectedBlockIds: readonly string[],
+  ) => void;
+};
 
 type DraftEditorProps = {
   document: DraftDocument;
@@ -28,6 +34,7 @@ type DraftEditorProps = {
   registerSaveBarrier: (barrier: SaveBarrier | null) => void;
   registerGenerationSource: (source: GenerationSource | null) => void;
   onScopeChange: (blockIds: readonly string[]) => void;
+  registerAuthorityBridge: (bridge: DraftAuthorityBridge | null) => void;
 };
 
 const SAVE_STATUS_COPY = {
@@ -43,9 +50,11 @@ export function DraftEditor({
   registerSaveBarrier,
   registerGenerationSource,
   onScopeChange,
+  registerAuthorityBridge,
 }: DraftEditorProps) {
   const [pasteNoticeVisible, setPasteNoticeVisible] = useState(false);
   const saveErrorRef = useRef<HTMLDivElement>(null);
+  const applyingAuthorityRef = useRef(false);
   const stableOnSaved = useCallback(
     (saved: DraftDocument) => onSaved(saved),
     [onSaved],
@@ -78,6 +87,7 @@ export function DraftEditor({
       },
     },
     onUpdate: ({ editor: currentEditor }) => {
+      if (applyingAuthorityRef.current) return;
       controller.markDirty(currentEditor.getJSON() as StructuredDocumentJson);
     },
     onBlur: () => {
@@ -122,6 +132,37 @@ export function DraftEditor({
     });
     return () => registerGenerationSource(null);
   }, [controller, editor, registerGenerationSource]);
+
+  useEffect(() => {
+    if (!editor) return;
+    registerAuthorityBridge({
+      install: (document, affectedBlockIds) => {
+        const node = editor.schema.nodeFromJSON(document.content);
+        applyingAuthorityRef.current = true;
+        editor.view.dispatch(
+          editor.state.tr
+            .replaceWith(0, editor.state.doc.content.size, node.content)
+            .setMeta("addToHistory", false),
+        );
+        applyingAuthorityRef.current = false;
+        controller.adoptSavedState(
+          document.currentVersion,
+          document.contentHash,
+        );
+        for (const blockId of affectedBlockIds) {
+          const element = editor.view.dom.querySelector(
+            `[data-block-id="${CSS.escape(blockId)}"]`,
+          );
+          element?.classList.add("recently-merged-block");
+          window.setTimeout(
+            () => element?.classList.remove("recently-merged-block"),
+            2_500,
+          );
+        }
+      },
+    });
+    return () => registerAuthorityBridge(null);
+  }, [controller, editor, registerAuthorityBridge]);
 
   useEffect(() => {
     const flushWhenHidden = () => {

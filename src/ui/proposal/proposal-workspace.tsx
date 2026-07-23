@@ -4,10 +4,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
+  applyMerge,
   createReview,
   generateProposal,
   listAlternatives,
   loadAlternative,
+  revertLatestMerge,
 } from "@/client/api-client";
 import { alternativeKeys } from "@/client/query-keys";
 import {
@@ -15,6 +17,8 @@ import {
   type Alternative,
 } from "@/domain/proposal/proposal-types";
 import type { DiffSnapshot } from "@/domain/review/review-types";
+import type { ReviewBlock } from "@/domain/review/review-types";
+import type { DraftDocument } from "@/domain/document/document-types";
 import type { GenerationSource } from "@/ui/draft/draft-editor";
 import {
   AlternativeEditor,
@@ -32,11 +36,18 @@ export function ProposalWorkspace({
   scopeBlockIds,
   getGenerationSource,
   registerSaveBarrier,
+  document,
+  onAuthoritativeDocument,
 }: {
   documentId: string;
   scopeBlockIds: readonly string[];
   getGenerationSource: () => GenerationSource | undefined;
   registerSaveBarrier: (barrier: AlternativeSaveBarrier | null) => void;
+  document: DraftDocument;
+  onAuthoritativeDocument: (
+    document: DraftDocument,
+    affectedBlockIds: readonly string[],
+  ) => void;
 }) {
   const queryClient = useQueryClient();
   const [prompt, setPrompt] = useState("");
@@ -47,6 +58,11 @@ export function ProposalWorkspace({
     "idle" | "updating" | "error"
   >("idle");
   const reviewRequestRef = useRef(0);
+  const [mergeError, setMergeError] = useState<string | null>(null);
+  const [sectionOpen, setSectionOpen] = useState(false);
+  const [sectionAcknowledged, setSectionAcknowledged] = useState(false);
+  const [revertEligible, setRevertEligible] = useState(false);
+  const [revertHash, setRevertHash] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [generationState, setGenerationState] = useState<GenerationState>({
     kind: "idle",
@@ -102,6 +118,67 @@ export function ProposalWorkspace({
     const timer = window.setTimeout(() => void calculateReview(selected), 0);
     return () => window.clearTimeout(timer);
   }, [calculateReview, selected]);
+
+  async function accept(
+    blocks: readonly ReviewBlock[],
+    kind: "block" | "sentence" | "section",
+  ) {
+    if (!selected || !review) return;
+    setMergeError(null);
+    const alternativeSaved =
+      !alternativeBarrierRef.current || (await alternativeBarrierRef.current());
+    const draftPrepared =
+      alternativeSaved && (await getGenerationSource()?.prepareGeneration());
+    if (!draftPrepared) {
+      setMergeError("Save My Draft and the Alternative before accepting.");
+      return;
+    }
+    try {
+      const result = await applyMerge({
+        documentId,
+        alternativeId: selected.id,
+        diffSnapshotId: review.id,
+        hunkIds:
+          kind === "section"
+            ? blocks.map((block) => block.blockHunkId)
+            : [
+                kind === "sentence"
+                  ? blocks[0]!.sentenceReplacement!.id
+                  : blocks[0]!.blockHunkId,
+              ],
+        expectedTargets: blocks.map((block) => ({
+          blockId: block.id,
+          beforeHash: block.expectedTargetHash,
+        })),
+        acceptanceKind: kind,
+        sectionReviewAcknowledged: kind === "section" && sectionAcknowledged,
+      });
+      onAuthoritativeDocument(result.document, result.affectedBlockIds);
+      setRevertEligible(result.revertEligible);
+      setRevertHash(result.document.contentHash);
+      setSectionOpen(false);
+      setSectionAcknowledged(false);
+      await calculateReview(selected, true, result.document.currentVersion);
+    } catch (error) {
+      setMergeError(
+        error instanceof Error ? error.message : "Acceptance failed safely.",
+      );
+      await calculateReview(selected);
+    }
+  }
+
+  async function revertMerge() {
+    try {
+      const result = await revertLatestMerge(documentId, document.contentHash);
+      onAuthoritativeDocument(result.document, result.affectedBlockIds);
+      setRevertEligible(false);
+      setRevertHash(null);
+      if (selected) await calculateReview(selected);
+    } catch (error) {
+      setMergeError(error instanceof Error ? error.message : "Revert failed.");
+      setRevertEligible(false);
+    }
+  }
 
   async function runGeneration() {
     if (
@@ -215,6 +292,15 @@ export function ProposalWorkspace({
           <h2 id="proposal-heading">Proposal Workspace</h2>
         </div>
         <div className="proposal-heading-actions">
+          {revertEligible && revertHash === document.contentHash ? (
+            <button
+              type="button"
+              className="button-secondary"
+              onClick={() => void revertMerge()}
+            >
+              Revert Merge
+            </button>
+          ) : null}
           <span className="demo-badge">Demo mode</span>
           <button
             type="button"
@@ -413,6 +499,11 @@ export function ProposalWorkspace({
           ) : (
             <ReviewRenderer
               snapshot={review}
+              onAccept={(block, kind) => void accept([block], kind)}
+              onAcceptSection={() => {
+                setSectionAcknowledged(false);
+                setSectionOpen(true);
+              }}
               onReviewCurrent={() => {
                 void (async () => {
                   const prepared =
@@ -428,6 +519,52 @@ export function ProposalWorkspace({
               }}
             />
           )}
+          {mergeError ? (
+            <div className="generation-error" role="alert">
+              {mergeError}
+            </div>
+          ) : null}
+          {sectionOpen && review ? (
+            <div
+              className="section-review-overlay"
+              role="dialog"
+              aria-modal="true"
+            >
+              <div className="section-review-dialog">
+                <h3>Review the complete section</h3>
+                <ul>
+                  {review.blocks.map((block) => (
+                    <li key={block.id}>
+                      <strong>{block.classification}</strong> ·{" "}
+                      {block.afterText || "Empty block"}
+                    </li>
+                  ))}
+                </ul>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={sectionAcknowledged}
+                    onChange={(event) =>
+                      setSectionAcknowledged(event.target.checked)
+                    }
+                  />
+                  I reviewed all changes in this section.
+                </label>
+                <div className="dialog-actions">
+                  <button type="button" onClick={() => setSectionOpen(false)}>
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!sectionAcknowledged}
+                    onClick={() => void accept(review.blocks, "section")}
+                  >
+                    Accept section changes
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : (
         <div className="proposal-empty">

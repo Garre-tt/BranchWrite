@@ -17,6 +17,7 @@ import type {
 } from "@/domain/document/document-types";
 import {
   DraftEditor,
+  type DraftAuthorityBridge,
   type GenerationSource,
   type SaveBarrier,
 } from "@/ui/draft/draft-editor";
@@ -42,6 +43,7 @@ export function BranchWriteApp() {
   const saveBarriersRef = useRef(new Map<string, SaveBarrier>());
   const alternativeSaveBarrierRef = useRef<SaveBarrier | null>(null);
   const generationSourcesRef = useRef(new Map<string, GenerationSource>());
+  const authorityBridgesRef = useRef(new Map<string, DraftAuthorityBridge>());
   const [scopeByDocument, setScopeByDocument] = useState<
     Record<string, readonly string[]>
   >({});
@@ -49,6 +51,9 @@ export function BranchWriteApp() {
     Record<string, DraftDocument>
   >({});
   const [navigationError, setNavigationError] = useState<string | null>(null);
+  const [mergeAnnouncement, setMergeAnnouncement] = useState<string | null>(
+    null,
+  );
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameError, setRenameError] = useState<string | null>(null);
 
@@ -247,6 +252,11 @@ export function BranchWriteApp() {
             {navigationError}
           </div>
         ) : null}
+        {mergeAnnouncement ? (
+          <div className="merge-announcement" role="status">
+            {mergeAnnouncement}
+          </div>
+        ) : null}
         {createMutation.isError ? (
           <div className="navigation-error" role="alert">
             {createMutation.error.message}
@@ -346,6 +356,18 @@ export function BranchWriteApp() {
                             [sessionDocument.id]: blockIds,
                           }))
                         }
+                        registerAuthorityBridge={(bridge) => {
+                          if (bridge) {
+                            authorityBridgesRef.current.set(
+                              sessionDocument.id,
+                              bridge,
+                            );
+                          } else {
+                            authorityBridgesRef.current.delete(
+                              sessionDocument.id,
+                            );
+                          }
+                        }}
                       />
                     </div>
                   ))}
@@ -355,12 +377,24 @@ export function BranchWriteApp() {
                 <ProposalWorkspace
                   key={activeDocument.id}
                   documentId={activeDocument.id}
+                  document={activeDocument}
                   scopeBlockIds={scopeByDocument[activeDocument.id] ?? []}
                   getGenerationSource={() =>
                     generationSourcesRef.current.get(activeDocument.id)
                   }
                   registerSaveBarrier={(barrier) => {
                     alternativeSaveBarrierRef.current = barrier;
+                  }}
+                  onAuthoritativeDocument={(document, affectedBlockIds) => {
+                    authorityBridgesRef.current
+                      .get(document.id)
+                      ?.install(document, affectedBlockIds);
+                    updateDocumentCaches(document);
+                    setMergeAnnouncement(
+                      affectedBlockIds.length
+                        ? `My Draft updated: ${affectedBlockIds.length} block${affectedBlockIds.length === 1 ? "" : "s"}.`
+                        : null,
+                    );
                   }}
                 />
               }

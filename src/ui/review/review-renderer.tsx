@@ -46,9 +46,13 @@ function WordChanges({ block }: { block: ReviewBlock }) {
 export function ReviewRenderer({
   snapshot,
   onReviewCurrent,
+  onAccept,
+  onAcceptSection,
 }: {
   snapshot: DiffSnapshot;
   onReviewCurrent: () => void;
+  onAccept: (block: ReviewBlock, kind: "block" | "sentence") => void;
+  onAcceptSection: () => void;
 }) {
   if (snapshot.status === "stale") {
     return (
@@ -79,11 +83,14 @@ export function ReviewRenderer({
           <WordChanges block={block} />
           {block.classification !== "unchanged" ? (
             <div className="review-acceptance">
-              <button type="button" disabled title="Available in Milestone 4">
+              <button type="button" onClick={() => onAccept(block, "block")}>
                 Accept block
               </button>
               {block.sentenceReplacement ? (
-                <button type="button" disabled title="Available in Milestone 4">
+                <button
+                  type="button"
+                  onClick={() => onAccept(block, "sentence")}
+                >
                   Accept sentence
                 </button>
               ) : null}
@@ -91,6 +98,13 @@ export function ReviewRenderer({
           ) : null}
         </article>
       ))}
+      <button
+        type="button"
+        className="accept-section-button"
+        onClick={onAcceptSection}
+      >
+        Review and accept section
+      </button>
     </div>
   );
 }

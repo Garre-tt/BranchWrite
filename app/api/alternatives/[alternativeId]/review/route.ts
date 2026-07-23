@@ -14,7 +14,13 @@ export async function GET(_request: Request, context: RouteContext) {
 
 export async function POST(request: Request, context: RouteContext) {
   const { alternativeId } = await context.params;
-  const parsed = createReviewRequestSchema.safeParse(await request.json());
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return invalidRequestResponse();
+  }
+  const parsed = createReviewRequestSchema.safeParse(body);
   if (!parsed.success) return invalidRequestResponse();
   return resultResponse(
     getReviewService().create({

@@ -8,6 +8,11 @@ import type {
   AlternativeSummary,
 } from "@/domain/proposal/proposal-types";
 import type { DiffSnapshot } from "@/domain/review/review-types";
+import type {
+  MergeCommand,
+  MergeResult,
+  RevertResult,
+} from "@/domain/merge/merge-types";
 
 type SuccessEnvelope<Value> = {
   data: Value;
@@ -167,6 +172,26 @@ export function createReview(
       method: "POST",
       ...(signal ? { signal } : {}),
       body: JSON.stringify(input),
+    },
+  );
+}
+
+export function applyMerge(command: MergeCommand): Promise<MergeResult> {
+  return request("/api/merges", {
+    method: "POST",
+    body: JSON.stringify(command),
+  });
+}
+
+export function revertLatestMerge(
+  documentId: string,
+  expectedCurrentHash: string,
+): Promise<RevertResult> {
+  return request(
+    `/api/documents/${encodeURIComponent(documentId)}/revert-latest`,
+    {
+      method: "POST",
+      body: JSON.stringify({ expectedCurrentHash }),
     },
   );
 }

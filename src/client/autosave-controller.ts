@@ -47,6 +47,19 @@ export class AutosaveController<Content> {
     return this.snapshot;
   }
 
+  adoptSavedState(version: number, contentHash: string): void {
+    this.clearTimer();
+    this.latestContent = null;
+    this.dirty = false;
+    this.snapshot = {
+      status: "clean",
+      version,
+      contentHash,
+      errorMessage: null,
+    };
+    this.emit();
+  }
+
   markDirty(content: Content): void {
     this.latestContent = content;
     this.dirty = true;
