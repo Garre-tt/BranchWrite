@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { ProposalService } from "@/application/proposal-service";
 import { ReviewService } from "@/application/review-service";
+import { MergeService } from "@/application/merge-service";
 import { DocumentService } from "@/domain/document/document-service";
 import { DeterministicMockProposalGenerator } from "@/domain/proposal/mock-proposal-generator";
 import type { ProposalGenerator } from "@/domain/proposal/proposal-types";
@@ -10,7 +11,12 @@ import type { StructuredDocumentJson } from "@/editor/structured-content";
 import { DocumentRepository } from "@/persistence/repositories/document-repository";
 import { ProposalRepository } from "@/persistence/repositories/proposal-repository";
 import { ReviewRepository } from "@/persistence/repositories/review-repository";
-import { alternatives, documents, proposals } from "@/persistence/schema";
+import {
+  alternatives,
+  documents,
+  mergeEvents,
+  proposals,
+} from "@/persistence/schema";
 import {
   createTestDatabase,
   type TestDatabase,
@@ -333,5 +339,91 @@ describe("Proposal service persistence", () => {
     });
     expect(stale.ok && stale.value.status).toBe("stale");
     expect(stale.ok && stale.value.staleReason).toBe("missing-target");
+  });
+
+  it("atomically accepts a reviewed block and reverts the latest Merge", async () => {
+    const { document, alternative } = await generate();
+    const reviews = new ReviewService(
+      new ReviewRepository(database),
+      proposalRepository,
+      new DocumentRepository(database),
+    );
+    const reviewed = reviews.create({
+      alternativeId: alternative.id,
+      againstCurrentDraft: false,
+    });
+    if (!reviewed.ok) throw new Error("Review setup failed.");
+    const block = reviewed.value.blocks[0]!;
+    const merges = new MergeService(database);
+    const merged = merges.merge({
+      documentId: document.id,
+      alternativeId: alternative.id,
+      diffSnapshotId: reviewed.value.id,
+      hunkIds: [block.blockHunkId],
+      expectedTargets: [
+        { blockId: block.id, beforeHash: block.expectedTargetHash },
+      ],
+      acceptanceKind: "block",
+      sectionReviewAcknowledged: false,
+    });
+    expect(merged.ok).toBe(true);
+    if (!merged.ok) throw new Error(merged.error.message);
+    expect(merged.value.document.content).toEqual(alternative.content);
+
+    const reverted = merges.revert(
+      document.id,
+      merged.value.document.contentHash,
+    );
+    expect(reverted.ok).toBe(true);
+    if (!reverted.ok) throw new Error(reverted.error.message);
+    expect(reverted.value.document.content).toEqual(document.content);
+  });
+
+  it("rejects unacknowledged sections and stale targets without partial writes", async () => {
+    const { document, alternative } = await generate();
+    const reviews = new ReviewService(
+      new ReviewRepository(database),
+      proposalRepository,
+      new DocumentRepository(database),
+    );
+    const reviewed = reviews.create({
+      alternativeId: alternative.id,
+      againstCurrentDraft: false,
+    });
+    if (!reviewed.ok) throw new Error("Review setup failed.");
+    const block = reviewed.value.blocks[0]!;
+    const merges = new MergeService(database);
+    const command = {
+      documentId: document.id,
+      alternativeId: alternative.id,
+      diffSnapshotId: reviewed.value.id,
+      hunkIds: [block.blockHunkId],
+      expectedTargets: [
+        { blockId: block.id, beforeHash: block.expectedTargetHash },
+      ],
+      acceptanceKind: "section" as const,
+      sectionReviewAcknowledged: false,
+    };
+    const unacknowledged = merges.merge(command);
+    expect(unacknowledged.ok ? "ok" : unacknowledged.error.code).toBe(
+      "INVALID_ACCEPTANCE_UNIT",
+    );
+
+    const changed = structuredClone(document.content);
+    changed.content[0]!.content![0]!.text = "A conflicting direct edit.";
+    expect(
+      documentsService.saveDocumentContent({
+        documentId: document.id,
+        content: changed,
+        expectedVersion: document.currentVersion,
+      }).ok,
+    ).toBe(true);
+    const stale = merges.merge({
+      ...command,
+      acceptanceKind: "block",
+      sectionReviewAcknowledged: false,
+    });
+    expect(stale.ok ? "ok" : stale.error.code).toBe("STALE_TARGET");
+    expect(database.db.select().from(mergeEvents).all()).toHaveLength(0);
   });
 });

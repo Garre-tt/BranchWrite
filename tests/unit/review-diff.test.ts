@@ -88,6 +88,7 @@ describe("Review diff", () => {
     });
     expect(
       eligibleSentenceReplacement(
+        "a",
         paragraph("a", "Dr. Smith writes.") as never,
         paragraph("a", "Dr. Smith edits.") as never,
         "Dr. Smith writes.",

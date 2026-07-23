@@ -20,10 +20,10 @@ test("renders read-only Review and recalculates after Alternative edits", async 
   await expect(review.locator("ins").first()).toBeVisible();
   await expect(
     review.getByRole("button", { name: "Accept block" }),
-  ).toBeDisabled();
+  ).toBeEnabled();
   await expect(
     review.getByRole("button", { name: "Accept sentence" }),
-  ).toBeDisabled();
+  ).toBeEnabled();
 
   await page.getByRole("button", { name: "Edit Alternative" }).click();
   const alternative = page.getByRole("textbox", {

@@ -98,12 +98,25 @@ export class MergeService {
                     : block.blockHunkId,
                 ),
               );
+        const expectedHunkIds =
+          command.acceptanceKind === "section"
+            ? payload.blocks.map((block) => block.blockHunkId)
+            : command.hunkIds;
+        const exactSectionHunks =
+          command.acceptanceKind !== "section" ||
+          (command.hunkIds.length === expectedHunkIds.length &&
+            expectedHunkIds.every((id) => command.hunkIds.includes(id)));
         if (
           !blocks.length ||
           (command.acceptanceKind !== "section" && blocks.length !== 1) ||
           (command.acceptanceKind === "section" &&
             (!command.sectionReviewAcknowledged ||
-              blocks.length !== scopeIds.length))
+              blocks.length !== scopeIds.length)) ||
+          !exactSectionHunks ||
+          new Set(command.hunkIds).size !== command.hunkIds.length ||
+          command.expectedTargets.length !== blocks.length ||
+          new Set(command.expectedTargets.map((target) => target.blockId))
+            .size !== command.expectedTargets.length
         )
           throw new MergeFailure(
             "INVALID_ACCEPTANCE_UNIT",
