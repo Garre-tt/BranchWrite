@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ProposalService } from "@/application/proposal-service";
 import { DocumentService } from "@/domain/document/document-service";
 import { DeterministicMockProposalGenerator } from "@/domain/proposal/mock-proposal-generator";
+import type { ProposalGenerator } from "@/domain/proposal/proposal-types";
 import type { StructuredDocumentJson } from "@/editor/structured-content";
 import { DocumentRepository } from "@/persistence/repositories/document-repository";
 import { ProposalRepository } from "@/persistence/repositories/proposal-repository";
@@ -180,5 +181,85 @@ describe("Proposal service persistence", () => {
     expect(result.ok ? "ok" : result.error.code).toBe("GENERATION_CANCELLED");
     expect(database.db.select().from(proposals).all()).toHaveLength(0);
     expect(database.db.select().from(alternatives).all()).toHaveLength(0);
+  });
+
+  it.each([
+    {
+      name: "generator failure",
+      expectedCode: "GENERATION_FAILED",
+      generator: {
+        generate: async () => {
+          throw new Error("Simulated generator failure.");
+        },
+      } satisfies ProposalGenerator,
+    },
+    {
+      name: "invalid generator output",
+      expectedCode: "INVALID_GENERATOR_OUTPUT",
+      generator: {
+        generate: async () => ({
+          content: {
+            type: "doc" as const,
+            content: [{ type: "paragraph", attrs: { id: "wrong-id" } }],
+          },
+          label: "Improve clarity" as const,
+          generatorVersion: "invalid-test",
+        }),
+      } satisfies ProposalGenerator,
+    },
+  ])(
+    "leaves My Draft and the workspace unchanged after $name",
+    async ({ generator, expectedCode }) => {
+      const created = documentsService.createDocument("Protected Draft");
+      if (!created.ok) throw new Error("Document setup failed.");
+      const scopeId = String(created.value.content.content[0]?.attrs?.id ?? "");
+      const service = new ProposalService(proposalRepository, generator);
+      const result = await service.generate(
+        {
+          documentId: created.value.id,
+          expectedDocumentVersion: created.value.currentVersion,
+          scopeBlockIds: [scopeId],
+          prompt: "Improve clarity",
+        },
+        new AbortController().signal,
+      );
+      expect(result.ok ? "ok" : result.error.code).toBe(expectedCode);
+      expect(database.db.select().from(proposals).all()).toHaveLength(0);
+      expect(database.db.select().from(alternatives).all()).toHaveLength(0);
+      expect(documentsService.getDocument(created.value.id)).toEqual({
+        ok: true,
+        value: created.value,
+      });
+    },
+  );
+
+  it("lists completed Alternatives chronologically with edited state", async () => {
+    const first = await generate();
+    const edited = structuredClone(first.alternative.content);
+    edited.content[0]!.content![0]!.text = "Edited chronology entry.";
+    proposalService.saveAlternative({
+      alternativeId: first.alternative.id,
+      content: edited,
+      expectedVersion: 0,
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 2));
+    const secondResult = await proposalService.generate(
+      {
+        documentId: first.document.id,
+        expectedDocumentVersion: first.document.currentVersion,
+        scopeBlockIds: ["scope-a"],
+        prompt: "Expand",
+      },
+      new AbortController().signal,
+    );
+    if (!secondResult.ok) throw new Error("Second generation failed.");
+
+    const listed = proposalService.listAlternatives(first.document.id);
+    expect(listed.ok && listed.value.map((entry) => entry.id)).toEqual([
+      first.alternative.id,
+      secondResult.value.id,
+    ]);
+    expect(listed.ok && listed.value[0]?.isEdited).toBe(true);
   });
 });

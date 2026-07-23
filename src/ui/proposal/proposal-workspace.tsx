@@ -28,10 +28,12 @@ export function ProposalWorkspace({
   documentId,
   scopeBlockIds,
   getGenerationSource,
+  registerSaveBarrier,
 }: {
   documentId: string;
   scopeBlockIds: readonly string[];
   getGenerationSource: () => GenerationSource | undefined;
+  registerSaveBarrier: (barrier: AlternativeSaveBarrier | null) => void;
 }) {
   const queryClient = useQueryClient();
   const [prompt, setPrompt] = useState("");
@@ -61,6 +63,17 @@ export function ProposalWorkspace({
   );
 
   async function runGeneration() {
+    if (
+      alternativeBarrierRef.current &&
+      !(await alternativeBarrierRef.current())
+    ) {
+      setGenerationState({
+        kind: "error",
+        message:
+          "Save the current Alternative successfully before generating another.",
+      });
+      return;
+    }
     const source = getGenerationSource();
     if (!source) {
       setGenerationState({
@@ -306,6 +319,7 @@ export function ProposalWorkspace({
             onSaved={handleAlternativeSaved}
             registerSaveBarrier={(barrier) => {
               alternativeBarrierRef.current = barrier;
+              registerSaveBarrier(barrier);
             }}
           />
         </div>

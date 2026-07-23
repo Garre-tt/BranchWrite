@@ -59,6 +59,21 @@ export function AlternativeEditor({
     return () => registerSaveBarrier(null);
   }, [controller, registerSaveBarrier]);
 
+  useEffect(() => {
+    const flushWhenHidden = () => {
+      if (window.document.visibilityState === "hidden") {
+        void controller.flush();
+      }
+    };
+    const flushOnPageHide = () => void controller.flush();
+    window.addEventListener("pagehide", flushOnPageHide);
+    window.document.addEventListener("visibilitychange", flushWhenHidden);
+    return () => {
+      window.removeEventListener("pagehide", flushOnPageHide);
+      window.document.removeEventListener("visibilitychange", flushWhenHidden);
+    };
+  }, [controller]);
+
   if (!editor)
     return <div className="editor-loading">Opening Alternative…</div>;
 

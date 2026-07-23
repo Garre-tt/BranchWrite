@@ -23,8 +23,8 @@ test("creates, renames, autosaves, and restores My Draft", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "Proposal Workspace" }),
   ).toBeVisible();
-  await expect(page.getByText("No proposal selected")).toBeVisible();
-  await expect(page.getByRole("button", { name: /generate/i })).toHaveCount(0);
+  await expect(page.getByText("No Alternative selected")).toBeVisible();
+  await expect(page.getByText("Demo mode")).toBeVisible();
 
   const editor = page.getByRole("textbox", { name: "My Draft editor" });
   await editor.click();

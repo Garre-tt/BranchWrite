@@ -40,6 +40,7 @@ export function BranchWriteApp() {
   const activeDocumentId = documentIdFromPathname(pathname);
   const queryClient = useQueryClient();
   const saveBarriersRef = useRef(new Map<string, SaveBarrier>());
+  const alternativeSaveBarrierRef = useRef<SaveBarrier | null>(null);
   const generationSourcesRef = useRef(new Map<string, GenerationSource>());
   const [scopeByDocument, setScopeByDocument] = useState<
     Record<string, readonly string[]>
@@ -96,7 +97,12 @@ export function BranchWriteApp() {
     const barrier = activeDocumentId
       ? saveBarriersRef.current.get(activeDocumentId)
       : undefined;
-    const saved = await (barrier?.() ?? Promise.resolve(true));
+    const draftSaved = await (barrier?.() ?? Promise.resolve(true));
+    const alternativeSaved =
+      draftSaved && alternativeSaveBarrierRef.current
+        ? await alternativeSaveBarrierRef.current()
+        : true;
+    const saved = draftSaved && alternativeSaved;
     if (!saved) {
       setNavigationError(
         "Save this draft successfully before opening another document.",
@@ -353,6 +359,9 @@ export function BranchWriteApp() {
                   getGenerationSource={() =>
                     generationSourcesRef.current.get(activeDocument.id)
                   }
+                  registerSaveBarrier={(barrier) => {
+                    alternativeSaveBarrierRef.current = barrier;
+                  }}
                 />
               }
             />
