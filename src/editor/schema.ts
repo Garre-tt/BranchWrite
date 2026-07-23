@@ -93,7 +93,9 @@ const BranchWriteLink = Link.extend({
   protocols: ["http", "https", "mailto"],
 });
 
-export function createEditorExtensions(): Extensions {
+export function createEditorExtensions(
+  additional: Extensions = [],
+): Extensions {
   return [
     Document,
     BranchWriteParagraph,
@@ -111,6 +113,7 @@ export function createEditorExtensions(): Extensions {
       newGroupDelay: HISTORY_NEW_GROUP_DELAY_MS,
     }),
     BlockIdExtension,
+    ...additional,
   ];
 }
 

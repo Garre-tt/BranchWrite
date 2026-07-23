@@ -6,6 +6,7 @@ import { useState } from "react";
 
 type DraftToolbarProps = {
   editor: Editor;
+  allowBlockStyles?: boolean;
 };
 
 function isSafeLink(href: string): boolean {
@@ -16,7 +17,10 @@ function isSafeLink(href: string): boolean {
   }
 }
 
-export function DraftToolbar({ editor }: DraftToolbarProps) {
+export function DraftToolbar({
+  editor,
+  allowBlockStyles = true,
+}: DraftToolbarProps) {
   const [linkInputVisible, setLinkInputVisible] = useState(false);
   const [linkValue, setLinkValue] = useState("");
   const [linkError, setLinkError] = useState<string | null>(null);
@@ -94,24 +98,28 @@ export function DraftToolbar({ editor }: DraftToolbarProps) {
 
   return (
     <div className="draft-toolbar" aria-label="Draft formatting">
-      <label className="sr-only" htmlFor="block-style">
-        Block style
-      </label>
-      <select
-        id="block-style"
-        value={blockValue}
-        onChange={(event) => applyBlockType(event.target.value)}
-        aria-label="Block style"
-      >
-        <option value="paragraph">Paragraph</option>
-        <option value="heading-1">Heading 1</option>
-        <option value="heading-2">Heading 2</option>
-        <option value="heading-3">Heading 3</option>
-        <option value="bullet-list">Bullet list</option>
-        <option value="ordered-list">Numbered list</option>
-        <option value="blockquote">Blockquote</option>
-      </select>
-      <span className="toolbar-divider" aria-hidden="true" />
+      {allowBlockStyles ? (
+        <>
+          <label className="sr-only" htmlFor="block-style">
+            Block style
+          </label>
+          <select
+            id="block-style"
+            value={blockValue}
+            onChange={(event) => applyBlockType(event.target.value)}
+            aria-label="Block style"
+          >
+            <option value="paragraph">Paragraph</option>
+            <option value="heading-1">Heading 1</option>
+            <option value="heading-2">Heading 2</option>
+            <option value="heading-3">Heading 3</option>
+            <option value="bullet-list">Bullet list</option>
+            <option value="ordered-list">Numbered list</option>
+            <option value="blockquote">Blockquote</option>
+          </select>
+          <span className="toolbar-divider" aria-hidden="true" />
+        </>
+      ) : null}
       <button
         type="button"
         aria-label="Bold"

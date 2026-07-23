@@ -6,16 +6,28 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useDraftAutosave } from "@/client/use-draft-autosave";
 import type { DraftDocument } from "@/domain/document/document-types";
 import { pastedHtmlWasSimplified } from "@/editor/paste-normalization";
+import {
+  readCurrentEditorScope,
+  ScopeDecorationExtension,
+} from "@/editor/scope-decoration-extension";
 import { createEditorExtensions } from "@/editor/schema";
 import type { StructuredDocumentJson } from "@/editor/structured-content";
 import { DraftToolbar } from "@/ui/draft/draft-toolbar";
 
 export type SaveBarrier = () => Promise<boolean>;
+export type GenerationSource = {
+  prepareGeneration: () => Promise<{
+    documentVersion: number;
+    scopeBlockIds: readonly string[];
+  } | null>;
+};
 
 type DraftEditorProps = {
   document: DraftDocument;
   onSaved: (document: DraftDocument) => void;
   registerSaveBarrier: (barrier: SaveBarrier | null) => void;
+  registerGenerationSource: (source: GenerationSource | null) => void;
+  onScopeChange: (blockIds: readonly string[]) => void;
 };
 
 const SAVE_STATUS_COPY = {
@@ -29,6 +41,8 @@ export function DraftEditor({
   document: draftDocument,
   onSaved,
   registerSaveBarrier,
+  registerGenerationSource,
+  onScopeChange,
 }: DraftEditorProps) {
   const [pasteNoticeVisible, setPasteNoticeVisible] = useState(false);
   const saveErrorRef = useRef<HTMLDivElement>(null);
@@ -42,7 +56,11 @@ export function DraftEditor({
   );
   const editor = useEditor({
     immediatelyRender: false,
-    extensions: createEditorExtensions(),
+    extensions: createEditorExtensions([
+      ScopeDecorationExtension.configure({
+        onScopeChange: (scope) => onScopeChange(scope.blockIds),
+      }),
+    ]),
     content: draftDocument.content,
     editorProps: {
       attributes: {
@@ -78,6 +96,32 @@ export function DraftEditor({
 
     return () => registerSaveBarrier(null);
   }, [controller, registerSaveBarrier]);
+
+  useEffect(() => {
+    if (!editor) return;
+    registerGenerationSource({
+      prepareGeneration: async () => {
+        const before = readCurrentEditorScope(editor.state).blockIds;
+        const saved = await controller.flush();
+        if (!saved) {
+          saveErrorRef.current?.focus();
+          return null;
+        }
+        const after = readCurrentEditorScope(editor.state).blockIds;
+        if (
+          before.length !== after.length ||
+          before.some((id, index) => id !== after[index])
+        ) {
+          return null;
+        }
+        return {
+          documentVersion: controller.getSnapshot().version,
+          scopeBlockIds: after,
+        };
+      },
+    });
+    return () => registerGenerationSource(null);
+  }, [controller, editor, registerGenerationSource]);
 
   useEffect(() => {
     const flushWhenHidden = () => {

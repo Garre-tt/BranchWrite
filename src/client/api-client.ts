@@ -3,6 +3,10 @@ import type {
   DraftDocument,
 } from "@/domain/document/document-types";
 import type { StructuredDocumentJson } from "@/editor/structured-content";
+import type {
+  Alternative,
+  AlternativeSummary,
+} from "@/domain/proposal/proposal-types";
 
 type SuccessEnvelope<Value> = {
   data: Value;
@@ -93,6 +97,51 @@ export function saveDocumentContent(input: {
 }): Promise<DraftDocument> {
   return request(
     `/api/documents/${encodeURIComponent(input.documentId)}/content`,
+    {
+      method: "PUT",
+      body: JSON.stringify({
+        content: input.content,
+        expectedVersion: input.expectedVersion,
+      }),
+    },
+  );
+}
+
+export function generateProposal(
+  input: {
+    documentId: string;
+    expectedDocumentVersion: number;
+    scopeBlockIds: readonly string[];
+    prompt: string;
+  },
+  signal: AbortSignal,
+): Promise<Alternative> {
+  return request("/api/proposals/generate", {
+    method: "POST",
+    signal,
+    body: JSON.stringify(input),
+  });
+}
+
+export function listAlternatives(
+  documentId: string,
+): Promise<AlternativeSummary[]> {
+  return request(
+    `/api/documents/${encodeURIComponent(documentId)}/alternatives`,
+  );
+}
+
+export function loadAlternative(alternativeId: string): Promise<Alternative> {
+  return request(`/api/alternatives/${encodeURIComponent(alternativeId)}`);
+}
+
+export function saveAlternativeContent(input: {
+  alternativeId: string;
+  content: StructuredDocumentJson;
+  expectedVersion: number;
+}): Promise<Alternative> {
+  return request(
+    `/api/alternatives/${encodeURIComponent(input.alternativeId)}`,
     {
       method: "PUT",
       body: JSON.stringify({

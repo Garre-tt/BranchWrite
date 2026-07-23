@@ -15,9 +15,13 @@ import type {
   DocumentSummary,
   DraftDocument,
 } from "@/domain/document/document-types";
-import { DraftEditor, type SaveBarrier } from "@/ui/draft/draft-editor";
+import {
+  DraftEditor,
+  type GenerationSource,
+  type SaveBarrier,
+} from "@/ui/draft/draft-editor";
 import { RenameDocumentDialog } from "@/ui/documents/rename-document-dialog";
-import { ProposalWorkspaceEmpty } from "@/ui/proposal/proposal-workspace-empty";
+import { ProposalWorkspace } from "@/ui/proposal/proposal-workspace";
 import { ResizableWorkspace } from "@/ui/workspace/resizable-workspace";
 
 function summaryFromDocument(document: DraftDocument): DocumentSummary {
@@ -36,6 +40,10 @@ export function BranchWriteApp() {
   const activeDocumentId = documentIdFromPathname(pathname);
   const queryClient = useQueryClient();
   const saveBarriersRef = useRef(new Map<string, SaveBarrier>());
+  const generationSourcesRef = useRef(new Map<string, GenerationSource>());
+  const [scopeByDocument, setScopeByDocument] = useState<
+    Record<string, readonly string[]>
+  >({});
   const [sessionDocuments, setSessionDocuments] = useState<
     Record<string, DraftDocument>
   >({});
@@ -84,7 +92,7 @@ export function BranchWriteApp() {
     [queryClient, setSessionDocuments],
   );
 
-  const crossSaveBarrier = useCallback(async () => {
+  async function crossSaveBarrier() {
     const barrier = activeDocumentId
       ? saveBarriersRef.current.get(activeDocumentId)
       : undefined;
@@ -97,7 +105,7 @@ export function BranchWriteApp() {
       setNavigationError(null);
     }
     return saved;
-  }, [activeDocumentId, setNavigationError]);
+  }
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -314,12 +322,39 @@ export function BranchWriteApp() {
                             saveBarriersRef.current.delete(sessionDocument.id);
                           }
                         }}
+                        registerGenerationSource={(source) => {
+                          if (source) {
+                            generationSourcesRef.current.set(
+                              sessionDocument.id,
+                              source,
+                            );
+                          } else {
+                            generationSourcesRef.current.delete(
+                              sessionDocument.id,
+                            );
+                          }
+                        }}
+                        onScopeChange={(blockIds) =>
+                          setScopeByDocument((current) => ({
+                            ...current,
+                            [sessionDocument.id]: blockIds,
+                          }))
+                        }
                       />
                     </div>
                   ))}
                 </section>
               }
-              secondary={<ProposalWorkspaceEmpty />}
+              secondary={
+                <ProposalWorkspace
+                  key={activeDocument.id}
+                  documentId={activeDocument.id}
+                  scopeBlockIds={scopeByDocument[activeDocument.id] ?? []}
+                  getGenerationSource={() =>
+                    generationSourcesRef.current.get(activeDocument.id)
+                  }
+                />
+              }
             />
             <RenameDocumentDialog
               open={renameOpen}
